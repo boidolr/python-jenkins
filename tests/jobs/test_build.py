@@ -59,7 +59,20 @@ class JenkinsBuildJobTest(JenkinsJobsTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_with_parameters_and_token(self, jenkins_mock):
+    def test_with_delay(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            {'foo': 'bar'},
+        ]
+
+        build_info = self.j.build_job(u'TestJob', delay='300')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         self.make_url('job/TestJob/build?delay=300'))
+        self.assertEqual(build_info, {'foo': 'bar'})
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_with_parameters_and_token_and_delay(self, jenkins_mock):
         jenkins_mock.side_effect = [
             {'foo': 'bar'},
         ]
@@ -67,9 +80,12 @@ class JenkinsBuildJobTest(JenkinsJobsTestBase):
         build_info = self.j.build_job(
             u'TestJob',
             parameters={'when': 'now', 'why': 'because I felt like it'},
-            token='some_token')
+            token='some_token',
+            delay=300)
 
+        self.assertTrue('buildWithParams', jenkins_mock.call_args[0][0].get_full_url())
         self.assertTrue('token=some_token' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertTrue('delay=300' in jenkins_mock.call_args[0][0].get_full_url())
         self.assertTrue('when=now' in jenkins_mock.call_args[0][0].get_full_url())
         self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].get_full_url())
         self.assertEqual(build_info, {'foo': 'bar'})

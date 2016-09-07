@@ -1018,7 +1018,7 @@ class Jenkins(object):
         self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
                                   DEFAULT_HEADERS))
 
-    def build_job_url(self, name, parameters=None, token=None):
+    def build_job_url(self, name, parameters=None, token=None, delay=None):
         '''Get URL to trigger build job.
 
         Authenticated setups may require configuring a token on the server
@@ -1026,29 +1026,36 @@ class Jenkins(object):
 
         :param parameters: parameters for job, or None., ``dict``
         :param token: (optional) token for building job, ``str``
+        :param delay: (optional) quiet period of job in seconds, ``int``
         :returns: URL for building job
         '''
         folder_url, short_name = self._get_job_folder(name)
+        additional_parameters = {}
+        if token:
+            additional_parameters['token'] = token
+        if delay:
+            additional_parameters['delay'] = delay
         if parameters:
-            if token:
-                parameters['token'] = token
+            if additional_parameters:
+                parameters.update(additional_parameters)
             return (self._build_url(BUILD_WITH_PARAMS_JOB, locals()) +
                     '?' + urlencode(parameters))
-        elif token:
+        elif additional_parameters:
             return (self._build_url(BUILD_JOB, locals()) +
-                    '?' + urlencode({'token': token}))
+                    '?' + urlencode(additional_parameters))
         else:
             return self._build_url(BUILD_JOB, locals())
 
-    def build_job(self, name, parameters=None, token=None):
+    def build_job(self, name, parameters=None, token=None, delay=None):
         '''Trigger build job.
 
         :param name: name of job
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
+        :param delay: quiet period of job in seconds, or ``None``, ``int``
         '''
         return self.jenkins_open(Request(
-            self.build_job_url(name, parameters, token), b''))
+            self.build_job_url(name, parameters, token, delay), b''))
 
     def run_script(self, script):
         '''Execute a groovy script on the jenkins master.
